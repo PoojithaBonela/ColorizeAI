@@ -85,7 +85,7 @@ You can find sample black & white images to test the application here:
 ---
 
 ## 🏗️ Training Process Flow
-<img src="assets/TraningFlow.png" width="50%" alt="Training Process Flow" />
+<img src="assets/TraningFlow.png" width="20%" alt="Training Process Flow" />
 
 ---
 
