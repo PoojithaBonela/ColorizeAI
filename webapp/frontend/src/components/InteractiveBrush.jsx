@@ -144,28 +144,28 @@ const InteractiveBrush = ({ image, onRefine, isRefining }) => {
                 )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 p-4 bg-slate-800/50 rounded-xl border border-white/5">
+            <div className="flex flex-wrap items-center justify-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4 bg-slate-800/50 rounded-xl border border-white/5">
                 <div className="flex items-center space-x-2">
                     <button
                         onClick={() => setIsEyedropper(!isEyedropper)}
-                        className={`p-2 rounded-lg transition-all ${isEyedropper ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300 hover:text-white'}`}
+                        className={`p-3 sm:p-2 rounded-lg transition-all ${isEyedropper ? 'bg-amber-500 text-white' : 'bg-slate-700 text-slate-300 hover:text-white'}`}
                         title="Pick color from image"
                     >
-                        <Pipette className="w-4 h-4" />
+                        <Pipette className="w-5 h-5 sm:w-4 sm:h-4" />
                     </button>
 
                     {selectedColor && (
                         <div className="flex items-center space-x-2 bg-slate-700/50 pr-3 rounded-lg overflow-hidden border border-white/10">
                             <div
-                                className="w-8 h-8"
+                                className="w-8 h-8 sm:w-8 sm:h-8"
                                 style={{ backgroundColor: selectedColor }}
                             />
-                            <span className="text-xs font-mono text-slate-300 uppercase">{selectedColor}</span>
+                            <span className="text-xs font-mono text-slate-300 uppercase hidden sm:block">{selectedColor}</span>
                             <button
                                 onClick={() => setSelectedColor(null)}
-                                className="text-slate-500 hover:text-rose-400 p-1"
+                                className="text-slate-500 hover:text-rose-400 p-2 sm:p-1"
                             >
-                                <Eraser className="w-3 h-3" />
+                                <Eraser className="w-4 h-4 sm:w-3 sm:h-3" />
                             </button>
                         </div>
                     )}
@@ -174,14 +174,14 @@ const InteractiveBrush = ({ image, onRefine, isRefining }) => {
                 <div className="h-6 w-px bg-white/10 hidden sm:block"></div>
 
                 <div className="flex items-center space-x-2">
-                    <Paintbrush className="w-4 h-4 text-slate-400" />
+                    <Paintbrush className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" />
                     <input
                         type="range"
                         min="10"
                         max="80"
                         value={brushSize}
                         onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                        className="w-24 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
+                        className="w-32 sm:w-24 h-2 sm:h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-primary-500"
                     />
                 </div>
 
@@ -189,21 +189,21 @@ const InteractiveBrush = ({ image, onRefine, isRefining }) => {
 
                 <button
                     onClick={clear}
-                    className="px-4 py-2 text-sm font-medium text-slate-300 hover:text-white flex items-center"
+                    className="px-4 py-3 sm:py-2 text-sm font-medium text-slate-300 hover:text-white flex items-center bg-slate-700/30 rounded-lg sm:bg-transparent"
                 >
-                    <Eraser className="w-4 h-4 mr-2" />
-                    Clear Brush
+                    <Eraser className="w-5 h-5 sm:w-4 sm:h-4 mr-2" />
+                    Clear
                 </button>
 
-                <div className="flex-grow"></div>
-
-                <button
-                    onClick={handleRefine}
-                    disabled={isRefining}
-                    className="px-6 py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-slate-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-500/20"
-                >
-                    Apply Refinement
-                </button>
+                <div className="w-full sm:w-auto flex-grow flex justify-center sm:justify-end mt-2 sm:mt-0">
+                    <button
+                        onClick={handleRefine}
+                        disabled={isRefining}
+                        className="w-full sm:w-auto px-6 py-3 sm:py-2 bg-primary-500 hover:bg-primary-600 disabled:bg-slate-700 text-white rounded-lg font-bold transition-all shadow-lg shadow-primary-500/20 text-sm sm:text-base"
+                    >
+                        Apply Refinement
+                    </button>
+                </div>
             </div>
 
             <p className="text-xs text-slate-500 italic px-2">

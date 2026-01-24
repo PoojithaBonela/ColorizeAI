@@ -68,9 +68,34 @@ BW-colorization/
 └── .gitignore
 ```
 
+---     
+
+## 🏗️ Model Weights
+To run the application with the pre-trained model:
+1. **Download the weights** from here: [**Download colorizer.pth**](https://drive.google.com/file/d/1eGip1reXxX8vZ32V2Gys1dRD-Jv67uwQ/view?usp=sharing)
+   > **Note:** The model file is ~50MB and trained on a custom LAB colorization dataset for 20 epochs on GPU.
+2. Place the `colorizer.pth` file in the `model/finetuned/` directory.
+   - If the folder doesn't exist, create it: `mkdir -p model/finetuned`
+3. The application will automatically load this model on startup.
+
+## 🖼️ Sample Images for Testing
+You can find sample black & white images to test the application here:
+[**Download Sample B&W Images**](https://drive.google.com/drive/folders/1KoyXPuazAZK-taN4tUsh-Skg9Z0Gr6td?usp=drive_link)
+
 ---
 
-## ⚙️ Setup Instructions
+## 🏗️ Training Process Flow
+![Training Process Flow](assets/TraningFlow.png)
+
+---
+
+## ✨ Colorization Showcase
+<p float="left">
+  <img src="assets/Result1.png" width="45%" />
+  <img src="assets/Result2.png" width="45%" /> 
+</p>
+
+## 🚀 Setup & Installations
 
 ### Backend Setup
 
@@ -111,8 +136,17 @@ Some objects (e.g., apples, animals) are color-ambiguous in grayscale.
 The system avoids hallucinating colors when visual cues are insufficient.
 This is an intentional design choice for faithful restoration.
 
-## 📌 Future Work
+## 📊 Training Details
 
-- Add a Creative (Generative) Mode for imaginative colorization.
-- Improve semantic awareness using segmentation models.
-- Deploy the app using Docker / cloud services.
+The model was trained with the following configuration:
+
+- **Epochs**: 20
+- **Best Validation Loss**: 8.1418
+- **Dataset**: [Places365 on Kaggle](https://www.kaggle.com/datasets/pankajkumar2002/places365) (~3,000 processed pairs used).
+- **Hardware**: Trained on a CUDA-enabled GPU.
+- **Optimization**: Used Adam optimizer with mixed precision training (`torch.cuda.amp`).
+
+- The model was trained using L1 reconstruction loss on the LAB color space, comparing predicted AB channels with ground-truth AB values.
+
+- Both training and validation loss decreased steadily, indicating stable learning.
+

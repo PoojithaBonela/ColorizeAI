@@ -16,11 +16,7 @@ const Footer = () => {
                         © {new Date().getFullYear()} ColorizeAI. Built with passion for memories.
                     </p>
 
-                    <div className="flex space-x-6 text-slate-500 text-sm">
-                        <a href="#" className="hover:text-primary-400 transition-colors">Privacy</a>
-                        <a href="#" className="hover:text-primary-400 transition-colors">Terms</a>
-                        <a href="#" className="hover:text-primary-400 transition-colors">Contact</a>
-                    </div>
+
                 </div>
             </div>
         </footer>

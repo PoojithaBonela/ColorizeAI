@@ -4,9 +4,10 @@ import torch
 import numpy as np
 import cv2
 from fastapi import FastAPI, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from training.colorization_model import ColorizationNet
+import base64
 
 # Initialize FastAPI app
 app = FastAPI(title="AI Image Colorization API")
@@ -40,6 +41,17 @@ else:
 model.to(DEVICE)
 model.eval()
 
+def calculate_color_energy(a, b):
+    """
+    Computes Color Strength metric: mean(|A| + |B|) normalized to 0-100.
+    """
+    if a.size == 0: return 0.0
+    energy = np.mean(np.abs(a) + np.abs(b))
+    # Normalized against "Realistic Max" (64.0) instead of "Theoretical Max" (256.0)
+    # This aligns the score with human perception of vibrancy in photos.
+    strength = np.clip((energy / 64.0) * 100.0, 0.0, 100.0)
+    return float(strength)
+
 def apply_adaptive_stretch(a_pred, b_pred, vibrancy):
     """
     Applies non-linear gamma stretching to amplify faint color signals.
@@ -67,9 +79,10 @@ def run_model_internal(img_np):
         ab_pred = model(l_tensor).squeeze(0).cpu().numpy()
     return ab_pred
 
-def process_inference(img_bgr: np.ndarray) -> np.ndarray:
+def process_inference(img_bgr: np.ndarray):
     """
     Advanced inference logic: Global Pass + 4x4 Tiled Pass + Adaptive Stretching.
+    Returns: (result_bgr, metrics_dict)
     """
     orig_h, orig_w = img_bgr.shape[:2]
     orig_lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
@@ -84,6 +97,9 @@ def process_inference(img_bgr: np.ndarray) -> np.ndarray:
     final_a = np.zeros((orig_h, orig_w), dtype=np.float32)
     final_b = np.zeros((orig_h, orig_w), dtype=np.float32)
     weight_sum = np.zeros((orig_h, orig_w), dtype=np.float32)
+    
+    # Metric: Tile Confidence Map
+    tile_confidence_map = []
 
     # Calculate window size with 50% overlap for smoothness
     win_h = int(orig_h / (GRID_SIZE * 0.6))
@@ -103,10 +119,16 @@ def process_inference(img_bgr: np.ndarray) -> np.ndarray:
     x_coords = np.linspace(0, orig_w - win_w, GRID_SIZE).astype(int)
 
     for y1 in y_coords:
+        row_scores = []
         for x1 in x_coords:
             y2, x2 = y1 + win_h, x1 + win_w
             tile_img = img_bgr[y1:y2, x1:x2]
             ab_tile = run_model_internal(tile_img)
+            
+            # --- METRIC CALCULATION (Tile Leve) ---
+            # TileEnergy[t] = mean(|A_t| + |B_t|)
+            tile_score = calculate_color_energy(ab_tile[0], ab_tile[1])
+            row_scores.append(tile_score)
             
             a_tile = cv2.resize(ab_tile[0], (win_w, win_h), interpolation=cv2.INTER_CUBIC)
             b_tile = cv2.resize(ab_tile[1], (win_w, win_h), interpolation=cv2.INTER_CUBIC)
@@ -114,6 +136,8 @@ def process_inference(img_bgr: np.ndarray) -> np.ndarray:
             final_a[y1:y2, x1:x2] += a_tile * mask
             final_b[y1:y2, x1:x2] += b_tile * mask
             weight_sum[y1:y2, x1:x2] += mask
+        
+        tile_confidence_map.append(row_scores)
 
     valid = weight_sum > 0
     final_a[valid] /= (weight_sum[valid] + 1e-6)
@@ -136,15 +160,26 @@ def process_inference(img_bgr: np.ndarray) -> np.ndarray:
     result_lab = cv2.merge([orig_l, a_uint8, b_uint8])
     result_bgr = cv2.cvtColor(result_lab, cv2.COLOR_LAB2BGR)
     
-    return result_bgr
+    # --- METRIC CALCULATION (Global) ---
+    global_score = calculate_color_energy(a_final, b_final)
+    
+    metrics = {
+        "global_color_strength": global_score,
+        "tile_confidence_map": tile_confidence_map
+    }
+    
+    return result_bgr, metrics
 
 @app.post("/colorize")
 async def colorize(file: UploadFile = File(...)):
     """
     Endpoint to colorize an uploaded B&W image.
-    Returns: Colorized JPG image.
+    Returns: JSON with base64 image and metrics.
     """
     # Read image from upload
+    if file.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+         return JSONResponse(status_code=400, content={"error": "Invalid file type. Only JPG and PNG are allowed."})
+
     contents = await file.read()
     nparr = np.frombuffer(contents, np.uint8)
     img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -153,13 +188,16 @@ async def colorize(file: UploadFile = File(...)):
         return {"error": "Could not decode image"}
 
     # Run AI inference
-    result_img = process_inference(img)
+    result_img, metrics = process_inference(img)
     
-    # Encode result to JPG
+    # Encode result to JPG -> Base64
     _, encoded_img = cv2.imencode(".jpg", result_img)
+    base64_str = base64.b64encode(encoded_img).decode("utf-8")
     
-    # Stream the response
-    return StreamingResponse(io.BytesIO(encoded_img.tobytes()), media_type="image/jpeg")
+    return JSONResponse(content={
+        "image": base64_str,
+        "metrics": metrics
+    })
 
 @app.post("/refine")
 async def refine(
@@ -186,17 +224,22 @@ async def refine(
     orig_h, orig_w = img.shape[:2]
 
     # Load Base Image (Previous Result) if it exists
+    # Load Base Image (Previous Result) if it exists
     if base:
         base_contents = await base.read()
         background = cv2.imdecode(np.frombuffer(base_contents, np.uint8), cv2.IMREAD_COLOR)
-        if background is None: background = process_inference(img)
+        if background is None: background, _ = process_inference(img)
     else:
-        background = process_inference(img)
+        background, _ = process_inference(img)
 
+    # 2. Find Bounding Box of Mask
     # 2. Find Bounding Box of Mask
     coords = cv2.findNonZero(mask_img)
     if coords is None:
-        return StreamingResponse(io.BytesIO(cv2.imencode(".jpg", process_inference(img))[1].tobytes()), media_type="image/jpeg")
+        # Fallback: No changes, return original background
+        _, buffer = cv2.imencode(".jpg", background)
+        b64 = base64.b64encode(buffer).decode('utf-8')
+        return JSONResponse(content={"image": b64, "metrics": {"brush_confidence": 0}})
     
     x_box, y_box, w_box, h_box = cv2.boundingRect(coords)
     center_x, center_y = x_box + w_box // 2, y_box + h_box // 2
@@ -312,9 +355,31 @@ async def refine(
     # Blend: Only apply the new color if it passes the vibrancy guard
     background[y1:y2, x1:x2] = (1 - final_alpha) * background[y1:y2, x1:x2] + final_alpha * result_crop_bgr
     
-    print(f"--> Refinement Blend Complete at ({x1},{y1}) to ({x2},{y2}).")
+    # --- METRIC Calculation (Brush Region) ---
+    # BrushEnergy = mean(|A_region| + |B_region|)
+    # We use the predicted color (a_up, b_up) within the masked area (mask sub-crop)
+    mask_crop = mask_img[y1:y2, x1:x2]
+    # Simple threshold for mask to determine "region"
+    strong_mask = mask_crop > 10
+    
+    if np.any(strong_mask):
+        brush_a = a_up[strong_mask]
+        brush_b = b_up[strong_mask]
+        brush_score = calculate_color_energy(brush_a, brush_b)
+    else:
+        brush_score = 0
+    
+    print(f"--> Refinement Blend Complete at ({x1},{y1}) to ({x2},{y2}). Brush Score: {brush_score:.1f}")
+    
     _, encoded_img = cv2.imencode(".jpg", background)
-    return StreamingResponse(io.BytesIO(encoded_img.tobytes()), media_type="image/jpeg")
+    base64_str = base64.b64encode(encoded_img).decode("utf-8")
+    
+    return JSONResponse(content={
+        "image": base64_str,
+        "metrics": {
+            "brush_confidence": brush_score
+        }
+    })
 
 @app.get("/")
 async def root():

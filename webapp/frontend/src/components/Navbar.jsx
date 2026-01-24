@@ -31,7 +31,7 @@ const Navbar = () => {
                             Application
                         </Link>
                         <a
-                            href="https://github.com"
+                            href="https://github.com/PoojithaBonela/ColorizeAI"
                             target="_blank"
                             rel="noopener noreferrer"
                             className="px-4 py-2 bg-slate-800 text-white rounded-full hover:bg-slate-700 transition-all flex items-center space-x-2"

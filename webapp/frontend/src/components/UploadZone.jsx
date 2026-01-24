@@ -14,18 +14,27 @@ const UploadZone = ({ onUpload, selectedFile, onClear }) => {
         setIsDragging(false);
     }, []);
 
+    const validateAndUpload = (file) => {
+        const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+        if (!validTypes.includes(file.type)) {
+            alert('Only JPG and PNG files are allowed!');
+            return;
+        }
+        onUpload(file);
+    };
+
     const handleDrop = useCallback((e) => {
         e.preventDefault();
         setIsDragging(false);
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            onUpload(files[0]);
+            validateAndUpload(files[0]);
         }
     }, [onUpload]);
 
     const handleFileInput = (e) => {
         if (e.target.files.length > 0) {
-            onUpload(e.target.files[0]);
+            validateAndUpload(e.target.files[0]);
         }
     };
 
@@ -65,7 +74,7 @@ const UploadZone = ({ onUpload, selectedFile, onClear }) => {
                 id="file-input"
                 type="file"
                 className="hidden"
-                accept="image/*"
+                accept="image/png, image/jpeg, image/jpg"
                 onChange={handleFileInput}
             />
             <div className="p-4 bg-slate-800 rounded-2xl mb-4 group-hover:scale-110 transition-transform">
