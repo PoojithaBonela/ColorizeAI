@@ -1,0 +1,22 @@
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+ai-env/
+.venv/
+venv/
+
+# Logs
+*.log
+
+# Frontend (not needed in backend image)
+webapp/frontend/
+
+# Large / runtime data
+data/
+output/
+results/
+
+# Git
+.git/
