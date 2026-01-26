@@ -28,5 +28,5 @@ COPY webapp/backend/ ./webapp/backend/
 # Expose the API port
 EXPOSE 8000
 
-# Start FastAPI using the full module path
-CMD ["uvicorn", "webapp.backend.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Start FastAPI using the PORT environment variable (Render compatibility)
+CMD sh -c "uvicorn webapp.backend.main:app --host 0.0.0.0 --port ${PORT:-8000}"
