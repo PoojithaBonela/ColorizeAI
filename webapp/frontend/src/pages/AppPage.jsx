@@ -5,6 +5,10 @@ import UploadZone from '../components/UploadZone';
 import CompareSlider from '../components/CompareSlider';
 import InteractiveBrush from '../components/InteractiveBrush';
 
+// Get API URL from environment variable (Vite)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
+
 const AppPage = () => {
     const [file, setFile] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
@@ -65,8 +69,8 @@ const AppPage = () => {
         setHistoryIndex(-1);
         setIsRefineMode(false);
         setMetrics({ global: 0, tiles: [], brush: null });
-        setShowConfidence(false);
     };
+
 
     const handleRefine = async (maskBlob, targetColor) => {
         if (!file || !resultBlob) return;
@@ -81,7 +85,7 @@ const AppPage = () => {
                 formData.append('target_color', targetColor);
             }
 
-            const response = await fetch('http://localhost:8000/refine', {
+            const response = await fetch(`${API_URL}/refine`, {
                 method: 'POST',
                 body: formData,
             });
@@ -114,7 +118,7 @@ const AppPage = () => {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch('http://localhost:8000/colorize', {
+            const response = await fetch(`${API_URL}/colorize`, {
                 method: 'POST',
                 body: formData,
             });
@@ -145,8 +149,8 @@ const AppPage = () => {
         setHistory([]);
         setHistoryIndex(-1);
         setMetrics({ global: 0, tiles: [], brush: null });
-        setShowConfidence(false);
     };
+
 
     return (
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8">
