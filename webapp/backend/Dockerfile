@@ -2,6 +2,7 @@ FROM python:3.10-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
 
 # System dependencies for OpenCV with extra resilience
 RUN apt-get update --fix-missing && \
